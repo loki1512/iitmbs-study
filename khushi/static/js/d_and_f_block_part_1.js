@@ -605,182 +605,333 @@ const quizData = [
 ];
 
 // App State
+// App State
 let currentIndex = 0;
-let phase = 'context'; // 'context', 'question', 'explanation'
+let phase = "context";
 let userSelectedAnswer = null;
 
-// DOM Elements
-const container = document.getElementById('card-container');
-const progressBar = document.getElementById('progress-bar');
-const progressText = document.getElementById('progress-text');
+let correctCount = 0;
+let wrongCount = 0;
 
-// Initialize the App
+// DOM Elements
+const container = document.getElementById("card-container");
+
+const progressBar = document.getElementById("prog-fill");
+const progressText = document.getElementById("prog-text");
+
+const correctEl = document.getElementById("hdr-correct");
+const wrongEl = document.getElementById("hdr-wrong");
+const accuracyEl = document.getElementById("hdr-acc");
+
+// Initialize
 function init() {
     currentIndex = 0;
-    phase = 'context';
+    phase = "context";
+
+    correctCount = 0;
+    wrongCount = 0;
+
+    updateScoreDisplay();
     render();
 }
 
-// Render Control
+// Score Display
+function updateScoreDisplay() {
+    correctEl.textContent = correctCount;
+    wrongEl.textContent = wrongCount;
+
+    const total = correctCount + wrongCount;
+
+    const accuracy =
+        total === 0
+            ? 0
+            : Math.round((correctCount / total) * 100);
+
+    accuracyEl.textContent = `${accuracy}%`;
+}
+
+// Render Controller
 function render() {
+
     updateProgress();
-    container.innerHTML = ''; 
 
     if (currentIndex >= quizData.length) {
         renderScoreScreen();
         return;
     }
 
-    if (phase === 'context') {
+    if (phase === "context") {
         renderContext();
-    } else if (phase === 'question') {
+    }
+    else if (phase === "question") {
         renderQuestion();
-    } else if (phase === 'explanation') {
+    }
+    else {
         renderExplanation();
     }
 }
 
-// Render Phases
+// Context Screen
 function renderContext() {
+
     const item = quizData[currentIndex];
-    
+
     container.innerHTML = `
-        <div class="card-label">Context</div>
-        <div class="content-text">${item.context}</div>
-        <button id="btn-next" class="action-btn">Next: Question</button>
+        <div class="sf-label">
+            Context
+        </div>
+
+        <div class="sf-content">
+            ${item.context}
+        </div>
+
+        <button
+            id="btn-next"
+            class="sf-action"
+        >
+            Next: Question
+        </button>
     `;
 
-    document.getElementById('btn-next').addEventListener('click', () => {
-        phase = 'question';
-        render();
-    });
+    document
+        .getElementById("btn-next")
+        .addEventListener("click", () => {
+            phase = "question";
+            render();
+        });
 }
 
+// Question Screen
 function renderQuestion() {
+
     const item = quizData[currentIndex];
+
     userSelectedAnswer = null;
-    
-    let optionsHtml = '';
 
-    // Check if it's MCQ or Text Input (pedagogical general case handler)
-    if (item.options && item.options.length > 0) {
-        optionsHtml = `<ul class="options-list">
-            ${item.options.map((opt, i) => `
+    const optionsHtml = `
+        <ul class="sf-options">
+            ${item.options.map(option => `
                 <li>
-                    <button class="option-btn" data-value="${opt.replace(/"/g, '&quot;')}">${opt}</button>
+                    <button
+                        class="sf-opt-btn"
+                        data-value="${option.replace(/"/g, '&quot;')}"
+                    >
+                        ${option}
+                    </button>
                 </li>
-            `).join('')}
-        </ul>`;
-    } else {
-        optionsHtml = `
-            <input type="text" id="text-input-ans" class="text-input" placeholder="Type your answer here..." autocomplete="off">
-        `;
-    }
-
-    container.innerHTML = `
-        <div class="card-label">Question</div>
-        <div class="content-text">${item.question}</div>
-        ${optionsHtml}
-        <button id="btn-submit" class="action-btn" disabled>Submit Answer</button>
+            `).join("")}
+        </ul>
     `;
 
-    const btnSubmit = document.getElementById('btn-submit');
+    container.innerHTML = `
+        <div class="sf-label">
+            Question
+        </div>
 
-    if (item.options && item.options.length > 0) {
-        const optionBtns = document.querySelectorAll('.option-btn');
-        optionBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // remove selected class from all
-                optionBtns.forEach(b => b.classList.remove('selected'));
-                // add to clicked
-                e.target.classList.add('selected');
-                userSelectedAnswer = e.target.getAttribute('data-value');
-                btnSubmit.disabled = false;
-            });
-        });
-    } else {
-        const textInput = document.getElementById('text-input-ans');
-        textInput.addEventListener('input', (e) => {
-            userSelectedAnswer = e.target.value;
-            btnSubmit.disabled = userSelectedAnswer.trim() === '';
-        });
-    }
+        <div class="sf-content">
+            ${item.question}
+        </div>
 
-    btnSubmit.addEventListener('click', () => {
-        phase = 'explanation';
+        ${optionsHtml}
+
+        <button
+            id="btn-submit"
+            class="sf-action"
+            disabled
+        >
+            Submit Answer
+        </button>
+    `;
+
+    const submitBtn =
+        document.getElementById("btn-submit");
+
+    const optionBtns =
+        document.querySelectorAll(".sf-opt-btn");
+
+    optionBtns.forEach(btn => {
+
+        btn.addEventListener("click", () => {
+
+            optionBtns.forEach(
+                b => b.classList.remove("selected")
+            );
+
+            btn.classList.add("selected");
+
+            userSelectedAnswer =
+                btn.dataset.value;
+
+            submitBtn.disabled = false;
+        });
+
+    });
+
+    submitBtn.addEventListener("click", () => {
+        phase = "explanation";
         render();
     });
 }
 
+// Explanation Screen
 function renderExplanation() {
-    const item = quizData[currentIndex];
-    let isCorrect = false;
 
-    // Strict evaluation for typing based questions (ignoring spaces & lowercasing)
-    if (item.options && item.options.length > 0) {
-        isCorrect = userSelectedAnswer === item.answer;
+    const item = quizData[currentIndex];
+
+    const isCorrect =
+        userSelectedAnswer === item.answer;
+
+    if (isCorrect) {
+        correctCount++;
     } else {
-        const cleanUser = userSelectedAnswer.replace(/\s+/g, '').toLowerCase();
-        const cleanTarget = item.answer.replace(/\s+/g, '').toLowerCase();
-        isCorrect = cleanUser === cleanTarget;
+        wrongCount++;
     }
 
-    const feedbackClass = isCorrect ? 'feedback-correct' : 'feedback-incorrect';
-    const feedbackTitle = isCorrect ? 'Correct!' : 'Incorrect';
+    updateScoreDisplay();
 
-    const btnText = currentIndex === quizData.length - 1 ? 'Finish Quiz' : 'Next Context';
+    const feedbackClass =
+        isCorrect ? "ok" : "fail";
+
+    const feedbackText =
+        isCorrect ? "Correct!" : "Incorrect";
+
+    const btnText =
+        currentIndex === quizData.length - 1
+            ? "Finish Quiz"
+            : "Next Context";
 
     container.innerHTML = `
-        <div class="card-label">Answer & Explanation</div>
-        
-        <div class="feedback-box ${feedbackClass}">
-            ${feedbackTitle}
-        </div>
-        
-        <div style="margin-bottom: 16px;">
-            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 4px;">Correct Answer:</p>
-            <p style="font-weight: 600;">${item.answer}</p>
+        <div class="sf-label">
+            Answer & Explanation
         </div>
 
-        <div class="explanation-text">
+        <div class="sf-feedback ${feedbackClass}">
+            ${feedbackText}
+        </div>
+
+        <div class="sf-content">
+            <strong>Correct Answer:</strong>
+            ${item.answer}
+        </div>
+
+        <div class="sf-explanation">
             ${item.explanation}
         </div>
 
-        <button id="btn-next-phase" class="action-btn">${btnText}</button>
+        <button
+            id="btn-next-phase"
+            class="sf-action"
+        >
+            ${btnText}
+        </button>
     `;
 
-    document.getElementById('btn-next-phase').addEventListener('click', () => {
-        currentIndex++;
-        phase = 'context';
-        render();
-    });
+    document
+        .getElementById("btn-next-phase")
+        .addEventListener("click", () => {
+
+            currentIndex++;
+            phase = "context";
+
+            render();
+        });
 }
 
+// Final Screen
 function renderScoreScreen() {
+
+    const total =
+        correctCount + wrongCount;
+
+    const accuracy =
+        total === 0
+            ? 0
+            : Math.round(
+                (correctCount / total) * 100
+            );
+
     container.innerHTML = `
-        <div class="score-screen">
-            <h2>Quiz Complete!</h2>
-            <p>You have successfully finished all 75 questions.</p>
-            <p>For the best pedagogical outcome, repeat this quiz 2-3 times until the narrative flow feels entirely familiar.</p>
-            <button id="btn-restart" class="action-btn" style="margin-top: 16px;">Restart Quiz</button>
+        <div class="sf-final">
+
+            <div class="sf-final-title">
+                Quiz Complete
+            </div>
+
+            <div class="sf-final-stats">
+
+                <div class="sf-stat-box">
+                    <span class="num">
+                        ${correctCount}
+                    </span>
+                    <span class="lbl">
+                        Correct
+                    </span>
+                </div>
+
+                <div class="sf-stat-box">
+                    <span class="num">
+                        ${wrongCount}
+                    </span>
+                    <span class="lbl">
+                        Wrong
+                    </span>
+                </div>
+
+                <div class="sf-stat-box">
+                    <span class="num">
+                        ${accuracy}%
+                    </span>
+                    <span class="lbl">
+                        Accuracy
+                    </span>
+                </div>
+
+            </div>
+
+            <div class="sf-final-note">
+                Repeat the quiz until the
+                concept flow becomes
+                second nature.
+            </div>
+
+            <button
+                id="btn-restart"
+                class="sf-action"
+            >
+                Restart Quiz
+            </button>
+
         </div>
     `;
 
-    document.getElementById('btn-restart').addEventListener('click', () => {
-        init();
-    });
+    document
+        .getElementById("btn-restart")
+        .addEventListener("click", init);
 }
 
+// Progress
 function updateProgress() {
+
     if (currentIndex >= quizData.length) {
-        progressBar.style.width = '100%';
-        progressText.innerText = `Completed`;
+
+        progressBar.style.width = "100%";
+
+        progressText.textContent =
+            "Completed";
+
         return;
     }
-    const percent = (currentIndex / quizData.length) * 100;
-    progressBar.style.width = `${percent}%`;
-    progressText.innerText = `Question ${currentIndex + 1} of ${quizData.length}`;
+
+    const percent =
+        ((currentIndex + 1)
+            / quizData.length) * 100;
+
+    progressBar.style.width =
+        `${percent}%`;
+
+    progressText.textContent =
+        `Q ${currentIndex + 1} / ${quizData.length}`;
 }
 
-// Start application
+// Start App
 init();
